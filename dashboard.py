@@ -10,7 +10,8 @@ st.subheader(dashbrd)
 
 if dashbrd == 'Daily Charts':
     components.html(trview.running_line, width=800)
-    crts, stocks = trview.chart()
-    for i in range(len(crts)):
-        st.subheader(stocks[i])
-        components.html(crts[i], width=800, height=550)
+    charts, stocks = trview.chart()
+    for idx, crt in enumerate(charts):
+        st.subheader(stocks[idx])
+        components.html(crt, width=800, height=550)
+
