@@ -13,4 +13,4 @@ if dashbrd == 'Daily Charts':
     crts, stocks = trview.chart()
     for i in range(len(crts)):
         st.subheader(stocks[i])
-        components.html(crts[i], width=800, height=500)
+        components.html(crts[i], width=800, height=550)

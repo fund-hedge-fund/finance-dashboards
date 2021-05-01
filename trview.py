@@ -51,7 +51,7 @@ def chart():
 running_line = """<!-- TradingView Widget BEGIN -->
 <div class="tradingview-widget-container">
   <div class="tradingview-widget-container__widget"></div>
-  <div class="tradingview-widget-copyright"><a href="https://ru.tradingview.com" rel="noopener" target="_blank"><span class="blue-text">Финансовые рынки</span></a> от TradingView</div>
+  <div class="tradingview-widget-copyright"><a href="https://ru.tradingview.com" rel="noopener" target="_blank"><span class="blue-text"></span></a></div>
   <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js" async>
   {
   "symbols": [
@@ -88,7 +88,7 @@ running_line = """<!-- TradingView Widget BEGIN -->
   "colorTheme": "dark",
   "isTransparent": false,
   "displayMode": "adaptive",
-  "locale": "ru"
+  "locale": "en"
 }
   </script>
 </div>
