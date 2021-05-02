@@ -8,7 +8,7 @@ import plotly.graph_objects as go
 st.header('Financial Dashboard')
 dashbrd = st.sidebar.selectbox("Select a Dashboard",
                                      ("Daily Charts", "Candlestick screener", "Stock Fundamentals", "Twitter analysis",
-                                      "Reddit trends", "Yahoo charts"))
+                                      "Reddit trends", "Yahoo Charts"))
 st.subheader(dashbrd)
 
 if dashbrd == 'Daily Charts':
@@ -18,14 +18,14 @@ if dashbrd == 'Daily Charts':
         st.subheader(stocks[idx])
         components.html(crt, width=800, height=550)
 
-if dashbrd == 'Yahoo charts':
+if dashbrd == 'Yahoo Charts':
     ticker_input = st.text_input('Please enter your company ticker:')
     search_button = st.button('Search')
     if search_button:
         hindpetro = yf.Ticker(ticker_input)
         df = hindpetro.history(period="max")
         df = df.reset_index()
-        df.rename(columns = {"" : "Date"})
+        df.rename(columns={"": "Date"})
         for i in ['Open', 'High', 'Close', 'Low']:
             df[i] = df[i].astype('float64')
         fig = go.Figure([go.Scatter(x=df['Date'], y=df['High'])])

@@ -18,7 +18,6 @@ class populate():
         self.allow_symbol_change = allow_symbol_change
         self.container_id = container_id
 
-
     def populate_json(self):
         return json.dumps(self.__dict__)
 
@@ -26,7 +25,7 @@ class populate():
         return str(self.get_header()) + str(self.populate_json()) + self.get_close()
 
     def get_header(self):
-        header = '"<div class="tradingview-widget-container"><div id="' + self.container_id + '"></div><script type="text/javascript">new TradingView.widget('
+        header = '<div class="tradingview-widget-container"><div id="' + self.container_id + '"></div><script type="text/javascript">new TradingView.widget('
         return header
 
     def get_close(self):
