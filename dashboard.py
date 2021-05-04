@@ -60,8 +60,7 @@ if dashbrd == 'Yahoo Charts':
         )
         st.plotly_chart(fig)
 if dashbrd == 'Stock Fundamentals':
-    r = redis.from_url(os.environ.get("REDIS_URL"))
-    client = redis.Redis(host="localhost", port=6379)
+    client = redis.from_url(os.environ.get("REDIS_URL"))
     symbol = st.sidebar.text_input('Symbol', value='AAPL')
     stock = IEXStock(iex_token.IEX_TOKEN, symbol)
     screen = st.sidebar.selectbox("View", ('Overview', 'Fundamentals', 'News', 'Ownership', 'Technicals'), index=1)
