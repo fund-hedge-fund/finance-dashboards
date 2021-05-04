@@ -116,7 +116,7 @@ if dashbrd == 'Stock Fundamentals':
 
         for article in news:
             st.subheader(article['headline'])
-            dt = datetime.utcfromtimestamp(article['datetime'] / 1000).isoformat()
+            dt = datetime.datetime.utcfromtimestamp(article['datetime'] / 1000).isoformat()
             st.write(f"Posted by {article['source']} at {dt}")
             st.write(article['url'])
             st.write(article['summary'])
