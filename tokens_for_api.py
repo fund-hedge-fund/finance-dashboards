@@ -1,0 +1,2 @@
+IEX_TOKEN = 'sk_e9c0296cfc7b465ba30082d6bd59c2be'
+FMP_TOKEN = 'b02456fa377dffaa8d8bebec36b37f44'

@@ -5,12 +5,13 @@ import pandas as pd
 import yfinance as yf
 import plotly.graph_objects as go
 from iex import IEXStock
-import iex_token
+import tokens_for_api
 import requests
 import redis
 import json
 from datetime import timedelta
 import datetime
+from financialmodelingprep import FMP
 import os
 
 
@@ -60,9 +61,11 @@ if dashbrd == 'Yahoo Charts':
         )
         st.plotly_chart(fig)
 if dashbrd == 'Stock Fundamentals':
-    client = redis.from_url(os.environ.get("REDIS_URL"))
+    #client = redis.from_url(os.environ.get("REDIS_URL"))
+    client = redis.Redis(host='localhost', port=6379, db=0)
     symbol = st.sidebar.text_input('Symbol', value='AAPL')
-    stock = IEXStock(iex_token.IEX_TOKEN, symbol)
+    stock = IEXStock(tokens_for_api.IEX_TOKEN, symbol)
+    fmp = FMP(tokens_for_api.FMP_TOKEN, symbol)
     screen = st.sidebar.selectbox("View", ('Overview', 'Fundamentals', 'News', 'Ownership', 'Technicals'), index=1)
     st.title(screen)
     if screen == 'Overview':
@@ -70,25 +73,19 @@ if dashbrd == 'Stock Fundamentals':
         cached_logo = client.get(logo_cache_key)
 
         if cached_logo is not None:
-            print("found logo in cache")
             logo = json.loads(cached_logo)
         else:
-            print("getting logo from api, and then storing it in cache")
             logo = stock.get_logo()
             client.set(logo_cache_key, json.dumps(logo))
-            client.expire(logo_cache_key, timedelta(hours=24))
 
         company_cache_key = f"{symbol}_company"
         cached_company_info = client.get(company_cache_key)
 
         if cached_company_info is not None:
-            print("found company news in cache")
             company = json.loads(cached_company_info)
         else:
-            print("getting company from api, and then storing it in cache")
             company = stock.get_company_info()
             client.set(company_cache_key, json.dumps(company))
-            client.expire(company_cache_key, timedelta(hours=24))
 
         col1, col2 = st.beta_columns([1, 4])
 
@@ -123,14 +120,20 @@ if dashbrd == 'Stock Fundamentals':
             st.image(article['image'])
 
     if screen == 'Fundamentals':
-        stats_cache_key = f"{symbol}_stats"
-        stats = client.get(stats_cache_key)
+        ratios_cache_key = f"{symbol}_ratios"
+        ratios = client.get(ratios_cache_key)
+        income_cache_key = f"{symbol}_income"
+        income = client.get(income_cache_key)
 
-        if stats is None:
-            stats = stock.get_stats()
-            client.set(stats_cache_key, json.dumps(stats))
+        if ratios is None:
+            #stats = stock.get_stats()
+            ratios = fmp.get_company_ratios()[0]
+            income = fmp.get_company_statements('income-statement')[0]
+            client.set(ratios_cache_key, json.dumps(ratios))
+            client.set(income_cache_key, json.dumps(income))
         else:
-            stats = json.loads(stats)
+            ratios = json.loads(ratios)
+            income = json.loads(income)
 
         st.header('Ratios')
 
@@ -138,30 +141,24 @@ if dashbrd == 'Stock Fundamentals':
 
         with col1:
             st.subheader('P/E')
-            st.write(stats['peRatio'])
-            st.subheader('Forward P/E')
-            st.write(stats['forwardPERatio'])
+            st.write(ratios['peRatioTTM'])
             st.subheader('PEG Ratio')
-            st.write(stats['pegRatio'])
+            st.write(ratios['pegRatioTTM'])
             st.subheader('Price to Sales')
-            st.write(stats['priceToSales'])
+            st.write(ratios['priceToSalesRatioTTM'])
             st.subheader('Price to Book')
-            st.write(stats['priceToBook'])
+            st.write(ratios['priceBookValueRatioTTM'])
         with col2:
             st.subheader('Revenue')
-            st.write(format_number(stats['revenue']))
-            st.subheader('Cash')
-            st.write(format_number(stats['totalCash']))
-            st.subheader('Debt')
-            st.write(format_number(stats['currentDebt']))
-            st.subheader('200 Day Moving Average')
-            st.write(stats['day200MovingAvg'])
-            st.subheader('50 Day Moving Average')
-            st.write(stats['day50MovingAvg'])
+            st.write(format_number(income['revenue']))
+            st.subheader('Ebitda')
+            st.write(format_number(income['ebitda']))
+            st.subheader('Net Income')
+            st.write(format_number(income['netIncome']))
 
         fundamentals_cache_key = f"{symbol}_fundamentals"
         fundamentals = client.get(fundamentals_cache_key)
-
+        """
         if fundamentals is None:
             fundamentals = stock.get_fundamentals('quarterly')
             client.set(fundamentals_cache_key, json.dumps(fundamentals))
@@ -227,3 +224,4 @@ if dashbrd == 'Stock Fundamentals':
             st.write(transaction['fullName'])
             st.write(transaction['transactionShares'])
             st.write(transaction['transactionPrice'])
+"""
