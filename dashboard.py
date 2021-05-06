@@ -124,16 +124,21 @@ if dashbrd == 'Stock Fundamentals':
         ratios = client.get(ratios_cache_key)
         income_cache_key = f"{symbol}_income"
         income = client.get(income_cache_key)
+        balance_cache_key = f'{symbol}_balance'
+        balance = client.get(balance_cache_key)
 
         if ratios is None:
             #stats = stock.get_stats()
             ratios = fmp.get_company_ratios()[0]
             income = fmp.get_company_statements('income-statement')[0]
+            balance = fmp.get_company_statements('balance-sheet-statement')[0:5]
             client.set(ratios_cache_key, json.dumps(ratios))
             client.set(income_cache_key, json.dumps(income))
+            client.set(balance_cache_key, json.dumps(balance))
         else:
             ratios = json.loads(ratios)
             income = json.loads(income)
+            balance = json.loads(balance)
 
         st.header('Ratios')
 
@@ -141,13 +146,13 @@ if dashbrd == 'Stock Fundamentals':
 
         with col1:
             st.subheader('P/E')
-            st.write(ratios['peRatioTTM'])
+            st.write(round(ratios['peRatioTTM'], 2))
             st.subheader('PEG Ratio')
-            st.write(ratios['pegRatioTTM'])
+            st.write(round(ratios['pegRatioTTM'], 2))
             st.subheader('Price to Sales')
-            st.write(ratios['priceToSalesRatioTTM'])
+            st.write(round(ratios['priceToSalesRatioTTM'], 2))
             st.subheader('Price to Book')
-            st.write(ratios['priceBookValueRatioTTM'])
+            st.write(round(ratios['priceBookValueRatioTTM'], 2))
         with col2:
             st.subheader('Revenue')
             st.write(format_number(income['revenue']))
@@ -155,73 +160,12 @@ if dashbrd == 'Stock Fundamentals':
             st.write(format_number(income['ebitda']))
             st.subheader('Net Income')
             st.write(format_number(income['netIncome']))
-
+        data = pd.DataFrame(index=['Assets', 'Liabilities', 'Shareholders Equity'])
+        balance = balance[::-1]
+        st.write('Values in millions USD')
+        for year in balance:
+            date = datetime.datetime.strptime(year['date'], '%Y-%m-%d').year
+            data[date] = [format_number(year['totalAssets']/1e6), format_number(year['totalLiabilities']/1e6), format_number(year['totalStockholdersEquity']/1e6)]
+        st.table(data)
         fundamentals_cache_key = f"{symbol}_fundamentals"
         fundamentals = client.get(fundamentals_cache_key)
-        """
-        if fundamentals is None:
-            fundamentals = stock.get_fundamentals('quarterly')
-            client.set(fundamentals_cache_key, json.dumps(fundamentals))
-        else:
-            fundamentals = json.loads(fundamentals)
-
-        for quarter in fundamentals:
-            st.header(f"Q{quarter['fiscalQuarter']} {quarter['fiscalYear']}")
-            st.subheader('Filing Date')
-            st.write(quarter['filingDate'])
-            st.subheader('Revenue')
-            st.write(format_number(quarter['revenue']))
-            st.subheader('Net Income')
-            st.write(format_number(quarter['incomeNet']))
-
-        st.header("Dividends")
-
-        dividends_cache_key = f"{symbol}_dividends"
-        dividends = client.get(dividends_cache_key)
-
-        if dividends is None:
-            dividends = stock.get_dividends()
-            client.set(dividends_cache_key, json.dumps(dividends))
-        else:
-            dividends = json.loads(dividends)
-
-        for dividend in dividends:
-            st.write(dividend['paymentDate'])
-            st.write(dividend['amount'])
-
-    if screen == 'Ownership':
-        st.subheader("Institutional Ownership")
-
-        institutional_ownership_cache_key = f"{symbol}_institutional"
-        institutional_ownership = client.get(institutional_ownership_cache_key)
-
-        if institutional_ownership is None:
-            institutional_ownership = stock.get_institutional_ownership()
-            client.set(institutional_ownership_cache_key, json.dumps(institutional_ownership))
-        else:
-            print("getting inst ownership from cache")
-            institutional_ownership = json.loads(institutional_ownership)
-
-        for institution in institutional_ownership:
-            st.write(institution['date'])
-            st.write(institution['entityProperName'])
-            st.write(institution['reportedHolding'])
-
-        st.subheader("Insider Transactions")
-
-        insider_transactions_cache_key = f"{symbol}_insider_transactions"
-
-        insider_transactions = client.get(insider_transactions_cache_key)
-        if insider_transactions is None:
-            insider_transactions = stock.get_insider_transactions()
-            client.set(insider_transactions_cache_key, json.dumps(insider_transactions))
-        else:
-            print("getting insider transactions from cache")
-            insider_transactions = json.loads(insider_transactions)
-
-        for transaction in insider_transactions:
-            st.write(transaction['filingDate'])
-            st.write(transaction['fullName'])
-            st.write(transaction['transactionShares'])
-            st.write(transaction['transactionPrice'])
-"""
