@@ -12,12 +12,20 @@ import json
 from datetime import timedelta
 import datetime
 from financialmodelingprep import FMP
+from jobs import populate_holdings
+import schedule
 import os
 
 
 def format_number(number):
     return f"{number:,}"
 
+
+schedule.every().monday.at('00:00').do(populate_holdings)
+schedule.every().tuesday.at('00:00').do(populate_holdings)
+schedule.every().wednesday.at('00:00').do(populate_holdings)
+schedule.every().thursday.at('00:00').do(populate_holdings)
+schedule.every().friday.at('00:00').do(populate_holdings)
 
 st.header('Financial Dashboard')
 dashbrd = st.sidebar.selectbox("Select a Dashboard",
@@ -61,8 +69,8 @@ if dashbrd == 'Yahoo Charts':
         )
         st.plotly_chart(fig)
 if dashbrd == 'Stock Fundamentals':
-    client = redis.from_url(os.environ.get("REDIS_URL"))
-    #client = redis.Redis(host='localhost', port=6379, db=0)
+    #client = redis.from_url(os.environ.get("REDIS_URL"))
+    client = redis.Redis(host='localhost', port=6379, db=0)
     symbol = st.sidebar.text_input('Symbol', value='AAPL')
     stock = IEXStock(tokens_for_api.IEX_TOKEN, symbol)
     fmp = FMP(tokens_for_api.FMP_TOKEN, symbol)
@@ -162,10 +170,13 @@ if dashbrd == 'Stock Fundamentals':
             st.write(format_number(income['netIncome']))
         data = pd.DataFrame(index=['Assets', 'Liabilities', 'Shareholders Equity'])
         balance = balance[::-1]
+        data_numerical = pd.DataFrame(index=['Assets', 'Liabilities', 'Shareholders Equity'])
         st.write('Values in millions USD')
         for year in balance:
             date = datetime.datetime.strptime(year['date'], '%Y-%m-%d').year
+            data_numerical[date] = [year['totalAssets'], year['totalLiabilities'], year['totalStockholdersEquity']]
             data[date] = [format_number(year['totalAssets']/1e6), format_number(year['totalLiabilities']/1e6), format_number(year['totalStockholdersEquity']/1e6)]
         st.table(data)
+        st.area_chart(data_numerical.T)
         fundamentals_cache_key = f"{symbol}_fundamentals"
         fundamentals = client.get(fundamentals_cache_key)
