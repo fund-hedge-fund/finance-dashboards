@@ -13,7 +13,7 @@ from datetime import timedelta
 import datetime
 from financialmodelingprep import FMP
 from jobs import populate_holdings
-import schedule
+import schedule as sh
 import os
 
 
@@ -21,11 +21,11 @@ def format_number(number):
     return f"{number:,}"
 
 
-schedule.every().monday.at('00:00').do(populate_holdings)
-schedule.every().tuesday.at('00:00').do(populate_holdings)
-schedule.every().wednesday.at('00:00').do(populate_holdings)
-schedule.every().thursday.at('00:00').do(populate_holdings)
-schedule.every().friday.at('00:00').do(populate_holdings)
+sh.every().monday.at('00:00').do(populate_holdings)
+sh.every().tuesday.at('00:00').do(populate_holdings)
+sh.every().wednesday.at('00:00').do(populate_holdings)
+sh.every().thursday.at('00:00').do(populate_holdings)
+sh.every().friday.at('00:00').do(populate_holdings)
 
 st.header('Financial Dashboard')
 dashbrd = st.sidebar.selectbox("Select a Dashboard",
