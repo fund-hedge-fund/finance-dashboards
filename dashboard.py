@@ -14,6 +14,7 @@ import datetime
 from financialmodelingprep import FMP
 from jobs import populate_holdings
 import schedule as sh
+from plotly.subplots import make_subplots
 import os
 
 
@@ -27,11 +28,10 @@ sh.every().wednesday.at('00:00').do(populate_holdings)
 sh.every().thursday.at('00:00').do(populate_holdings)
 sh.every().friday.at('00:00').do(populate_holdings)
 
-st.header('Financial Dashboard')
 dashbrd = st.sidebar.selectbox("Select a Dashboard",
                                      ("Daily Charts", "Candlestick screener", "Stock Fundamentals", "Twitter analysis",
-                                      "Reddit trends", "Yahoo Charts"))
-st.subheader(dashbrd)
+                                      "Reddit trends", "Yahoo Charts"), 2)
+st.header(dashbrd)
 
 if dashbrd == 'Daily Charts':
     components.html(trview.running_line, width=800)
@@ -71,7 +71,7 @@ if dashbrd == 'Yahoo Charts':
 if dashbrd == 'Stock Fundamentals':
     client = redis.from_url(os.environ.get("REDIS_URL"))
     #client = redis.Redis(host='localhost', port=6379, db=0)
-    symbol = st.sidebar.text_input('Symbol', value='AAPL')
+    symbol = st.sidebar.text_input('Symbol', value='EPAM')
     stock = IEXStock(tokens_for_api.IEX_TOKEN, symbol)
     fmp = FMP(tokens_for_api.FMP_TOKEN, symbol)
     screen = st.sidebar.selectbox("View", ('Overview', 'Fundamentals', 'News', 'Ownership', 'Technicals'), index=1)
@@ -128,17 +128,21 @@ if dashbrd == 'Stock Fundamentals':
             st.image(article['image'])
 
     if screen == 'Fundamentals':
+
         ratios_cache_key = f"{symbol}_ratios"
         ratios = client.get(ratios_cache_key)
         income_cache_key = f"{symbol}_income"
         income = client.get(income_cache_key)
         balance_cache_key = f'{symbol}_balance'
         balance = client.get(balance_cache_key)
+        #income_quarter_cache_key = f'{symbol}_income_quarter'
+        #income_quarter = client.get(income_quarter_cache_key)
 
-        if ratios is None:
+        if not all((ratios, income, balance)):
             #stats = stock.get_stats()
             ratios = fmp.get_company_ratios()[0]
-            income = fmp.get_company_statements('income-statement')[0]
+            income = fmp.get_company_statements('income-statement')[0:5]
+            #income_quarter = fmp.get_company_statements('income-statement', 'quarter')[0]
             balance = fmp.get_company_statements('balance-sheet-statement')[0:5]
             client.set(ratios_cache_key, json.dumps(ratios))
             client.set(income_cache_key, json.dumps(income))
@@ -147,6 +151,7 @@ if dashbrd == 'Stock Fundamentals':
             ratios = json.loads(ratios)
             income = json.loads(income)
             balance = json.loads(balance)
+            #income_quarter = json.loads(income_quarter)
 
         st.header('Ratios')
 
@@ -163,11 +168,31 @@ if dashbrd == 'Stock Fundamentals':
             st.write(round(ratios['priceBookValueRatioTTM'], 2))
         with col2:
             st.subheader('Revenue')
-            st.write(format_number(income['revenue']))
+            st.write(format_number(income[0]['revenue']))
+            st.subheader('Operating Income')
+            st.write(format_number((income[0]['operatingIncome'])))
             st.subheader('Ebitda')
-            st.write(format_number(income['ebitda']))
+            st.write(format_number(income[0]['ebitda']))
             st.subheader('Net Income')
-            st.write(format_number(income['netIncome']))
+            st.write(format_number(income[0]['netIncome']))
+        inc_data = pd.DataFrame(index=['Revenue', 'Operating Income', 'EBITDA', 'Net Income'])
+        inc_data_table = pd.DataFrame(index=['Revenue', 'Operating Income', 'EBITDA', 'Net Income'])
+        income = income[::-1]
+        gross_margin = []
+        for year in income:
+            gross_margin.append(round(100*year['grossProfitRatio'], 2))
+            date = datetime.datetime.strptime(year['date'], '%Y-%m-%d').year
+            inc_data[date] = [year['revenue'], year['operatingIncome'], year['ebitda'], year['netIncome']]
+            inc_data_table[date] = [format_number(year['revenue'] / 1e6), format_number(year['operatingIncome'] / 1e6),
+                          format_number(year['ebitda'] / 1e6), format_number(year['netIncome'] / 1e6)]
+        st.write('Values in millions USD')
+        st.table(inc_data_table)
+        pd.options.plotting.backend = "plotly"
+        fig = make_subplots(specs=[[{"secondary_y": True}]])
+        #fig = inc_data.T['Revenue'].plot.bar(labels=dict(index="Year", value="Billions USD", variable=""))
+        fig.add_bar(x=inc_data.columns, y=inc_data.T['Revenue'], showlegend=True, name='Revenue', secondary_y=False)
+        fig.add_trace(go.Scatter(x=inc_data.columns, y=gross_margin, showlegend=True, name='Gross Profit Margin (%)'), secondary_y=True)
+        st.plotly_chart(fig)
         data = pd.DataFrame(index=['Assets', 'Liabilities', 'Shareholders Equity'])
         balance = balance[::-1]
         data_numerical = pd.DataFrame(index=['Assets', 'Liabilities', 'Shareholders Equity'])
@@ -178,5 +203,8 @@ if dashbrd == 'Stock Fundamentals':
             data[date] = [format_number(year['totalAssets']/1e6), format_number(year['totalLiabilities']/1e6), format_number(year['totalStockholdersEquity']/1e6)]
         st.table(data)
         st.area_chart(data_numerical.T)
+        #pd.options.plotting.backend = "plotly"
+        #fig = data_numerical.T.plot.area()
+        #st.plotly_chart(fig)
         fundamentals_cache_key = f"{symbol}_fundamentals"
         fundamentals = client.get(fundamentals_cache_key)
