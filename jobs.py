@@ -21,7 +21,7 @@ def populate_holdings():
     connection = psycopg2.connect(host=tokens_for_api.DB_HOST, database=tokens_for_api.DB_NAME,
                                   user=tokens_for_api.DB_USER, password=tokens_for_api.DB_PASS)
     cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
-    cursor.execute("select * from stock where is_etf = TRUE and symbol = 'ARKK'")
+    cursor.execute("select * from stock_etf where is_etf = TRUE and symbol = 'ARKK'")
     etfs = cursor.fetchall()
 
     for idx, row in df.iterrows():
@@ -55,4 +55,3 @@ def populate_holdings():
 #    """, (asset.name, asset.symbol, asset.exchange))
 #
 #connection.commit()
-
