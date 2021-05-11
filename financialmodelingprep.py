@@ -18,10 +18,13 @@ class FMP:
         r = requests.get(url)
         return r.json()
 
-    def get_company_statements(self, statement_type):
+    def get_company_statements(self, statement_type, ann_or_quart=''):
         """Statement type should be income-statement, balance-sheet-statement, cash-flow-statement"""
         url = f"{self.BASE_URL}/{statement_type}/{self.symbol}?limit=120&apikey={self.token}"
         r = requests.get(url)
+        if ann_or_quart == 'quarter':
+            url = f"{self.BASE_URL}/{statement_type}/{self.symbol}?period=quarter&limit=120&apikey={self.token}"
+            r = requests.get(url)
         return r.json()
 
     def get_company_ratios(self):

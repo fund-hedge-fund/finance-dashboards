@@ -175,6 +175,8 @@ if dashbrd == 'Stock Fundamentals':
             st.write(format_number(income[0]['ebitda']))
             st.subheader('Net Income')
             st.write(format_number(income[0]['netIncome']))
+        chart = trview.chart_stock_beg + str([symbol, symbol]) + trview.chart_stock_end
+        components.html(chart, width=750, height=500)
         inc_data = pd.DataFrame(index=['Revenue', 'Operating Income', 'EBITDA', 'Net Income'])
         inc_data_table = pd.DataFrame(index=['Revenue', 'Operating Income', 'EBITDA', 'Net Income'])
         income = income[::-1]
@@ -189,6 +191,15 @@ if dashbrd == 'Stock Fundamentals':
         st.table(inc_data_table)
         pd.options.plotting.backend = "plotly"
         fig = make_subplots(specs=[[{"secondary_y": True}]])
+        fig.update_xaxes(showgrid=False)
+        fig.update_yaxes(showgrid=False)
+        fig.update_layout(legend=dict(
+            yanchor="bottom",
+            y=1,
+            xanchor="left",
+            x=0.01
+        ))
+        fig.update_layout(width=800, height=500)
         #fig = inc_data.T['Revenue'].plot.bar(labels=dict(index="Year", value="Billions USD", variable=""))
         fig.add_bar(x=inc_data.columns, y=inc_data.T['Revenue'], showlegend=True, name='Revenue', secondary_y=False)
         fig.add_trace(go.Scatter(x=inc_data.columns, y=gross_margin, showlegend=True, name='Gross Profit Margin (%)'), secondary_y=True)

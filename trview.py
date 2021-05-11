@@ -92,3 +92,32 @@ running_line = """<!-- TradingView Widget BEGIN -->
   </script>
 </div>
 <!-- TradingView Widget END -->"""
+
+chart_stock_beg = """<!-- TradingView Widget BEGIN -->
+<div class="tradingview-widget-container">
+  <div id="tradingview_c09ac"></div>
+  <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+  <script type="text/javascript">
+  new TradingView.MediumWidget(
+  {
+  "symbols": [
+"""
+chart_stock_end = """
+  ],
+  "chartOnly": false,
+  "width": 700,
+  "height": 450,
+  "locale": "en",
+  "colorTheme": "dark",
+  "gridLineColor": "#2a2e39",
+  "trendLineColor": "#1976d2",
+  "fontColor": "#787b86",
+  "underLineColor": "rgba(55, 166, 239, 0.15)",
+  "isTransparent": false,
+  "autosize": false,
+  "container_id": "tradingview_c09ac"
+}
+  );
+  </script>
+</div>
+<!-- TradingView Widget END -->"""
