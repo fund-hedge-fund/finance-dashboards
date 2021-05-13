@@ -28,7 +28,7 @@ def job():
     schedule.every().monday.at('00:00').do(populate_holdings)
     schedule.every().tuesday.at('00:00').do(populate_holdings)
     schedule.every().wednesday.at('00:00').do(populate_holdings)
-    schedule.every().thursday.at('10:40').do(populate_holdings)
+    schedule.every().thursday.at('10:50').do(populate_holdings)
     schedule.every().friday.at('00:00').do(populate_holdings)
     while True:
         schedule.run_pending()
