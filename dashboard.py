@@ -25,7 +25,7 @@ def format_number(number):
 sh.every().monday.at('00:00').do(populate_holdings)
 sh.every().tuesday.at('00:00').do(populate_holdings)
 sh.every().wednesday.at('00:00').do(populate_holdings)
-sh.every().thursday.at('00:00').do(populate_holdings)
+sh.every().thursday.at('10:20').do(populate_holdings)
 sh.every().friday.at('00:00').do(populate_holdings)
 
 dashbrd = st.sidebar.selectbox("Select a Dashboard",
@@ -180,9 +180,10 @@ if dashbrd == 'Stock Fundamentals':
         inc_data = pd.DataFrame(index=['Revenue', 'Operating Income', 'EBITDA', 'Net Income'])
         inc_data_table = pd.DataFrame(index=['Revenue', 'Operating Income', 'EBITDA', 'Net Income'])
         income = income[::-1]
-        gross_margin = []
+        margins = {'gross_margin': [], 'net_margin': []}
         for year in income:
-            gross_margin.append(round(100*year['grossProfitRatio'], 2))
+            margins['gross_margin'].append(round(100*year['grossProfitRatio'], 2))
+            margins['net_margin'].append(round(100 * year['netIncomeRatio'], 2))
             date = datetime.datetime.strptime(year['date'], '%Y-%m-%d').year
             inc_data[date] = [year['revenue'], year['operatingIncome'], year['ebitda'], year['netIncome']]
             inc_data_table[date] = [format_number(year['revenue'] / 1e6), format_number(year['operatingIncome'] / 1e6),
@@ -190,6 +191,20 @@ if dashbrd == 'Stock Fundamentals':
         st.write('Values in millions USD')
         st.table(inc_data_table)
         pd.options.plotting.backend = "plotly"
+        fig = make_subplots(specs=[[{"secondary_y": True}]])
+        fig.update_xaxes(showgrid=True)
+        fig.update_yaxes(showgrid=True)
+        fig.update_layout(legend=dict(
+            yanchor="bottom",
+            y=1,
+            xanchor="left",
+            x=0.01
+        ))
+        fig.update_layout(width=800, height=500)
+        #fig = inc_data.T['Revenue'].plot.bar(labels=dict(index="Year", value="Billions USD", variable=""))
+        fig.add_bar(x=inc_data.columns, y=inc_data.T['Net Income'], showlegend=True, name='Net Income', secondary_y=False)
+        fig.add_trace(go.Scatter(x=inc_data.columns, y=margins['net_margin'], showlegend=True, name='Net Income Margin (%)'), secondary_y=True)
+        st.plotly_chart(fig)
         fig = make_subplots(specs=[[{"secondary_y": True}]])
         fig.update_xaxes(showgrid=False)
         fig.update_yaxes(showgrid=False)
@@ -200,9 +215,11 @@ if dashbrd == 'Stock Fundamentals':
             x=0.01
         ))
         fig.update_layout(width=800, height=500)
-        #fig = inc_data.T['Revenue'].plot.bar(labels=dict(index="Year", value="Billions USD", variable=""))
+        # fig = inc_data.T['Revenue'].plot.bar(labels=dict(index="Year", value="Billions USD", variable=""))
         fig.add_bar(x=inc_data.columns, y=inc_data.T['Revenue'], showlegend=True, name='Revenue', secondary_y=False)
-        fig.add_trace(go.Scatter(x=inc_data.columns, y=gross_margin, showlegend=True, name='Gross Profit Margin (%)'), secondary_y=True)
+        fig.add_trace(
+            go.Scatter(x=inc_data.columns, y=margins['gross_margin'], showlegend=True, name='Gross Profit Margin (%)'),
+            secondary_y=True)
         st.plotly_chart(fig)
         data = pd.DataFrame(index=['Assets', 'Liabilities', 'Shareholders Equity'])
         balance = balance[::-1]

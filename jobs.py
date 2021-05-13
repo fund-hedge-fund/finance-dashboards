@@ -8,6 +8,8 @@ import alpaca_trade_api as tradeapi
 import psycopg2
 import psycopg2.extras
 import datetime
+import logging
+logging.basicConfig(filename='app.log', filemode='a', format='%(name)s - %(levelname)s - %(message)s')
 
 
 def populate_holdings():
@@ -37,8 +39,7 @@ def populate_holdings():
                 VALUES (%s, %s, %s, %s, %s)""", (etfs[0]['id'], stock['id'], current_date, shares, weight))
 
     connection.commit()
-    print('Executed successfully at ', datetime.datetime.now())
-
+    logging.warning(f'Executed successfully at {datetime.datetime.now()}')
 
 #api = tradeapi.REST(tokens_for_api.API_KEY, tokens_for_api.API_SECRET, base_url=tokens_for_api.API_URL)
 #assets = api.list_assets()
