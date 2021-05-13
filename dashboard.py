@@ -25,11 +25,11 @@ def format_number(number):
 
 
 def job():
-    schedule.every().monday.at('00:00').do(populate_holdings)
-    schedule.every().tuesday.at('00:00').do(populate_holdings)
-    schedule.every().wednesday.at('00:00').do(populate_holdings)
-    schedule.every().thursday.at('10:50').do(populate_holdings)
-    schedule.every().friday.at('00:00').do(populate_holdings)
+    schedule.every().monday.at('11:00').do(populate_holdings)
+    schedule.every().tuesday.at('11:00').do(populate_holdings)
+    schedule.every().wednesday.at('11:00').do(populate_holdings)
+    schedule.every().thursday.at('11:00').do(populate_holdings)
+    schedule.every().friday.at('11:00').do(populate_holdings)
     while True:
         schedule.run_pending()
         time.sleep(1)
@@ -202,8 +202,8 @@ if dashbrd == 'Stock Fundamentals':
         st.table(inc_data_table)
         pd.options.plotting.backend = "plotly"
         fig = make_subplots(specs=[[{"secondary_y": True}]])
-        fig.update_xaxes(showgrid=True)
-        fig.update_yaxes(showgrid=True)
+        fig.update_xaxes(showgrid=False)
+        fig.update_yaxes(showgrid=False)
         fig.update_layout(legend=dict(
             yanchor="bottom",
             y=1,
