@@ -13,20 +13,30 @@ from datetime import timedelta
 import datetime
 from financialmodelingprep import FMP
 from jobs import populate_holdings
-import schedule as sh
+import schedule
 from plotly.subplots import make_subplots
 import os
+import threading
+import time
 
 
 def format_number(number):
     return f"{number:,}"
 
 
-sh.every().monday.at('00:00').do(populate_holdings)
-sh.every().tuesday.at('00:00').do(populate_holdings)
-sh.every().wednesday.at('00:00').do(populate_holdings)
-sh.every().thursday.at('10:20').do(populate_holdings)
-sh.every().friday.at('00:00').do(populate_holdings)
+def job():
+    schedule.every().monday.at('00:00').do(populate_holdings)
+    schedule.every().tuesday.at('00:00').do(populate_holdings)
+    schedule.every().wednesday.at('00:00').do(populate_holdings)
+    schedule.every().thursday.at('10:40').do(populate_holdings)
+    schedule.every().friday.at('00:00').do(populate_holdings)
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
+
+
+x = threading.Thread(target=job, args=(1,))
+x.start()
 
 dashbrd = st.sidebar.selectbox("Select a Dashboard",
                                      ("Daily Charts", "Candlestick screener", "Stock Fundamentals", "Twitter analysis",
