@@ -35,7 +35,7 @@ def job():
         time.sleep(1)
 
 
-x = threading.Thread(target=job, args=(1,))
+x = threading.Thread(target=job)
 x.start()
 
 dashbrd = st.sidebar.selectbox("Select a Dashboard",
