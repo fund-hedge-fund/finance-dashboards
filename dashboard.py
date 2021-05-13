@@ -9,7 +9,6 @@ import tokens_for_api
 import requests
 import redis
 import json
-from datetime import timedelta
 import datetime
 from financialmodelingprep import FMP
 from jobs import populate_holdings
