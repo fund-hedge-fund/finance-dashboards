@@ -50,7 +50,7 @@ def populate_holdings():
                 continue
             if stock:
                 try:
-                        cursor.execute("""
+                    cursor.execute("""
                         INSERT INTO etf_holding (etf_id, holding_id, dt, shares, weight)
                         VALUES (%s, %s, %s, %s, %s)""", (etf['id'], stock['id'], current_date, shares, weight))
                 except:
@@ -76,4 +76,4 @@ def populate_holdings():
 #
 #connection.commit()
 
-populate_holdings()
+#populate_holdings()
