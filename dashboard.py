@@ -4,8 +4,8 @@ import trview
 import pandas as pd
 import yfinance as yf
 import plotly.graph_objects as go
-from fbprophet import Prophet
-from fbprophet.plot import plot_plotly
+from prophet import Prophet
+from prophet.plot import plot_plotly
 from iex import IEXStock
 import tokens_for_api
 import requests
