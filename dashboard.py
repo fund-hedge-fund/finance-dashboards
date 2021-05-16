@@ -4,6 +4,8 @@ import trview
 import pandas as pd
 import yfinance as yf
 import plotly.graph_objects as go
+from fbprophet import Prophet
+from fbprophet.plot import plot_plotly
 from iex import IEXStock
 import tokens_for_api
 import requests
@@ -78,13 +80,50 @@ if dashbrd == 'Yahoo Charts':
         )
         st.plotly_chart(fig)
 if dashbrd == 'Stock Fundamentals':
-    client = redis.from_url(os.environ.get("REDIS_URL"))
-    #client = redis.Redis(host='localhost', port=6379, db=0)
-    symbol = st.sidebar.text_input('Symbol', value='EPAM')
+    #client = redis.from_url(os.environ.get("REDIS_URL"))
+    client = redis.Redis(host='localhost', port=6379, db=0)
+    symbol = st.sidebar.text_input('Symbol', value='AAPL')
     stock = IEXStock(tokens_for_api.IEX_TOKEN, symbol)
     fmp = FMP(tokens_for_api.FMP_TOKEN, symbol)
-    screen = st.sidebar.selectbox("View", ('Overview', 'Fundamentals', 'News', 'Ownership', 'Technicals'), index=1)
+    screen = st.sidebar.selectbox("View", ('Overview', 'Fundamentals', 'News', 'Ownership', 'Price Prediction'))
     st.title(screen)
+    if screen == 'Price Prediction':
+        selected_stock = st.text_input('Select stock for prediction', 'AAPL')
+        n_years = st.slider('Years of prediction', 0.5, 4.0)
+        period = n_years * 365
+        data_load_state = st.text("Load data...")
+        data = yf.download(selected_stock, '2015-01-01', datetime.datetime.now().strftime("%Y-%m-%d"))
+        data.reset_index(inplace=True)
+        data_load_state.text("Loading data...done!")
+        st.subheader('Raw data')
+        st.write(data.tail())
+
+        # Plot raw data
+        def plot_raw_data():
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=data['Date'], y=data['Open'], name="stock_open"))
+            fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], name="stock_close"))
+            fig.layout.update(title_text='Time Series data with Rangeslider', xaxis_rangeslider_visible=True)
+            st.plotly_chart(fig)
+        plot_raw_data()
+        # Predict forecast with Prophet.
+        df_train = data[['Date', 'Close']]
+        df_train = df_train.rename(columns={"Date": "ds", "Close": "y"})
+        m = Prophet()
+        m.fit(df_train)
+        future = m.make_future_dataframe(periods=int(period))
+        forecast = m.predict(future)
+        # Show and plot forecast
+        st.subheader('Forecast data')
+        st.write(forecast.tail())
+        st.write(f'Forecast plot for {n_years} years')
+        fig1 = plot_plotly(m, forecast)
+        st.plotly_chart(fig1)
+        st.write("Forecast components")
+        fig2 = m.plot_components(forecast)
+        st.write(fig2)
+
+
     if screen == 'Overview':
         logo_cache_key = f"{symbol}_logo"
         cached_logo = client.get(logo_cache_key)
