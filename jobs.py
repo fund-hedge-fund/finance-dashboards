@@ -3,7 +3,7 @@ import csv
 from io import StringIO
 import pandas as pd
 import datetime
-import tokens_for_api
+import configs
 import alpaca_trade_api as tradeapi
 import psycopg2
 import psycopg2.extras
@@ -24,8 +24,8 @@ def populate_holdings():
             'IZRL': base_url + 'ARK_ISRAEL_INNOVATIVE_TECHNOLOGY_ETF_IZRL_HOLDINGS.csv'
             }
     headers = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:66.0) Gecko/20100101 Firefox/66.0"}
-    connection = psycopg2.connect(host=tokens_for_api.DB_HOST, database=tokens_for_api.DB_NAME,
-                                  user=tokens_for_api.DB_USER, password=tokens_for_api.DB_PASS)
+    connection = psycopg2.connect(host=configs.DB_HOST, database=configs.DB_NAME,
+                                  user=configs.DB_USER, password=configs.DB_PASS)
     cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
     cursor.execute("select * from stock_etf where is_etf = TRUE")
     etfs = cursor.fetchall()

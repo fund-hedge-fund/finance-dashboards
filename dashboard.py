@@ -6,8 +6,9 @@ import yfinance as yf
 import plotly.graph_objects as go
 from prophet import Prophet
 from prophet.plot import plot_plotly
+import alpaca_trade_api as tradeapi
 from iex import IEXStock
-import tokens_for_api
+import configs
 import requests
 import redis
 import json
@@ -19,59 +20,12 @@ from plotly.subplots import make_subplots
 import os
 import threading
 import time
-
-import os, csv
+import os
+import csv
 import talib
 import yfinance as yf
+import psycopg2
 import pandas
-from flask import Flask, escape, request, render_template
-from patterns import candlestick_patterns
-
-app = Flask(__name__)
-
-@app.route('/snapshot')
-def snapshot():
-    with open('datasets/symbols.csv') as f:
-        for line in f:
-            if "," not in line:
-                continue
-            symbol = line.split(",")[0]
-            data = yf.download(symbol, start="2020-01-01", end="2020-08-01")
-            data.to_csv('datasets/daily/{}.csv'.format(symbol))
-
-    return {
-        "code": "success"
-    }
-
-@app.route('/')
-def index():
-    pattern  = request.args.get('pattern', False)
-    stocks = {}
-
-    with open('datasets/symbols.csv') as f:
-        for row in csv.reader(f):
-            stocks[row[0]] = {'company': row[1]}
-
-    if pattern:
-        for filename in os.listdir('datasets/daily'):
-            df = pandas.read_csv('datasets/daily/{}'.format(filename))
-            pattern_function = getattr(talib, pattern)
-            symbol = filename.split('.')[0]
-
-            try:
-                results = pattern_function(df['Open'], df['High'], df['Low'], df['Close'])
-                last = results.tail(1).values[0]
-
-                if last > 0:
-                    stocks[symbol][pattern] = 'bullish'
-                elif last < 0:
-                    stocks[symbol][pattern] = 'bearish'
-                else:
-                    stocks[symbol][pattern] = None
-            except Exception as e:
-                print('failed on filename: ', filename)
-
-    return render_template('index.html', candlestick_patterns=candlestick_patterns, stocks=stocks, pattern=pattern)
 
 
 def format_number(number):
@@ -92,14 +46,9 @@ def job():
 x = threading.Thread(target=job)
 x.start()
 
-def start_flask():
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
-
-y = threading.Thread(target = start_flask)
-y.start()
 
 dashbrd = st.sidebar.selectbox("Select a Dashboard",
-                                     ("Daily Charts", "Candlestick screener", "Stock Fundamentals", "Twitter analysis",
+                                     ("Daily Charts", "Candlestick Screener", "Stock Fundamentals", "Twitter analysis",
                                       "Reddit trends", "Yahoo Charts"), 2)
 st.header(dashbrd)
 
@@ -138,12 +87,70 @@ if dashbrd == 'Yahoo Charts':
             )
         )
         st.plotly_chart(fig)
+if dashbrd == 'Candlestick Screener':
+    inv_map = {v: k for k, v in configs.candlestick_patterns.items()}
+    query = """SELECT time_bucket('1 day', dt) AS day,
+                      first(symbol, dt) as symbol,
+                      first(close, dt) AS open,
+                      last(close, dt) AS close,
+                      max(close) AS high,
+                      min(close) AS low
+                FROM stock
+                WHERE dt > NOW() - interval '5d'
+                GROUP BY symbol, day
+                ORDER BY day ASC;
+            """
+    connection = psycopg2.connect(host=configs.DB_HOST, database=configs.DB_NAME,
+                                  user=configs.DB_USER, password=configs.DB_PASS)
+    stocks = pd.read_sql(query, con=connection)
+    sbls = stocks.symbol.unique()
+    option = st.selectbox('Select candlestick pattern', (list(configs.candlestick_patterns.values())), 18)
+    api = tradeapi.REST(configs.API_KEY, configs.API_SECRET, base_url=configs.API_URL)
+    for sbl in sbls:
+        stock = stocks[stocks.symbol == sbl]
+        pattern_function = getattr(talib, inv_map[option])
+        result = pattern_function(stock.open, stock.high, stock.low, stock.close).tail(1).values[0]
+        if result:
+            if result > 0:
+                st.info(f'{sbl} is Bullish 💹')
+                if st.button(f'BUY {sbl}'):
+                    resp = api.submit_order(
+                        symbol=sbl,
+                        qty=1,
+                        side='buy',
+                        type='market',
+                        time_in_force='gtc'
+                     )
+                    if resp.filled_qty:
+                        st.write(f'Market order to BUY {sbl} was not executed')
+                    else:
+                        st.write(f'Market order to BUY {sbl} was executed: Quantity {resp.filled_qty}, Price {resp.filled_avg_price}')
+                st.image(f'https://finviz.com/chart.ashx?t={sbl}&ty=c&ta=1&p=d&s=l')
+
+            else:
+                st.info(f'{sbl} is Bearish 📉')
+                if st.button(f'SELL {sbl}'):
+                    resp = api.submit_order(
+                        symbol=sbl,
+                        qty=1,
+                        side='sell',
+                        type='market',
+                        time_in_force='gtc'
+                    )
+                    if resp.filled_qty:
+                        st.write(f'Market order to SELL {sbl} was not executed')
+                    else:
+                        st.write(
+                            f'Market order to SELL {sbl} was executed: Quantity {resp.filled_qty}, Price {resp.filled_avg_price}')
+                st.image(f'https://finviz.com/chart.ashx?t={sbl}&ty=c&ta=1&p=d&s=l')
+
+
 if dashbrd == 'Stock Fundamentals':
-    client = redis.from_url(os.environ.get("REDIS_URL"))
-    #client = redis.Redis(host='localhost', port=6379, db=0)
+    #client = redis.from_url(os.environ.get("REDIS_URL"))
+    client = redis.Redis(host='34.68.97.213', port=6379, db=0)
     symbol = st.sidebar.text_input('Symbol', value='AAPL')
-    stock = IEXStock(tokens_for_api.IEX_TOKEN, symbol)
-    fmp = FMP(tokens_for_api.FMP_TOKEN, symbol)
+    stock = IEXStock(configs.IEX_TOKEN, symbol)
+    fmp = FMP(configs.FMP_TOKEN, symbol)
     screen = st.sidebar.selectbox("View", ('Overview', 'Fundamentals', 'News', 'Ownership', 'Price Prediction'))
     st.title(screen)
     if screen == 'Price Prediction':
