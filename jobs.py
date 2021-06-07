@@ -9,6 +9,7 @@ import psycopg2
 import psycopg2.extras
 import datetime
 import logging
+from configs import copy_from_stringio
 logging.basicConfig(filename='app.log', filemode='a', format='%(name)s - %(levelname)s - %(message)s')
 
 
@@ -60,20 +61,58 @@ def populate_holdings():
     connection.commit()
     logging.warning(f'Executed successfully at {datetime.datetime.now()}')
 
-#api = tradeapi.REST(tokens_for_api.API_KEY, tokens_for_api.API_SECRET, base_url=tokens_for_api.API_URL)
-#assets = api.list_assets()
-#cursor.execute("""
-#        update stock_etf set is_etf = TRUE
-#        where symbol in ('ARKK', 'ARKQ', 'PRNT', 'IZRL', 'ARKG', 'ARKF', 'ARKW')
-#        """)
-#connection.commit()
-#for asset in assets:
-#    print(f"Inserting stock {asset.name} {asset.symbol}")
-#    cursor.execute("""
-#        INSERT INTO stock_etf (name, symbol, exchange, is_etf)
-#        VALUES (%s, %s, %s, false)
-#    """, (asset.name, asset.symbol, asset.exchange))
-#
-#connection.commit()
+
+def run_on_initiation():
+    api = tradeapi.REST(configs.API_KEY, configs.API_SECRET, base_url=configs.API_URL)
+    assets = api.list_assets()
+    connection = psycopg2.connect(host=configs.DB_HOST, database=configs.DB_NAME,
+                                      user=configs.DB_USER, password=configs.DB_PASS)
+    cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    for asset in assets:
+        print(f"Inserting stock {asset.name} {asset.symbol}")
+        cursor.execute("""
+            INSERT INTO stock_etf (name, symbol, exchange, is_etf)
+            VALUES (%s, %s, %s, false)
+        """, (asset.name, asset.symbol, asset.exchange))
+    connection.commit()
+
+
+def run_on_initiation2():
+    connection = psycopg2.connect(host=configs.DB_HOST, database=configs.DB_NAME,
+                                  user=configs.DB_USER, password=configs.DB_PASS)
+    cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cursor.execute("""
+            update stock_etf set is_etf = TRUE
+            where symbol in ('ARKK', 'ARKQ', 'PRNT', 'IZRL', 'ARKG', 'ARKF', 'ARKW')
+            """)
+    connection.commit()
+
+#run_on_initiation()
+
+#run_on_initiation2()
 
 #populate_holdings()
+
+
+def populate_stock():
+
+    connection = psycopg2.connect(host=configs.DB_HOST, database=configs.DB_NAME, user=configs.DB_USER,
+                                  password=configs.DB_PASS)
+    api = tradeapi.REST(configs.API_KEY, configs.API_SECRET, base_url=configs.API_URL)
+    query = """SELECT * FROM stock WHERE symbol = '%s' ORDER BY dt DESC LIMIT 1"""
+    name_with_ticker = pd.read_csv('tickers.csv')
+    nw = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:00')
+    for idx, row in name_with_ticker.iterrows():
+        cursor = connection.cursor()
+        sbl = pd.read_sql(query % (row.ticker), con=connection)
+        cursor.close()
+        st = (sbl['dt'][0] + datetime.timedelta(minutes=1)).strftime('%Y-%m-%d %H:%M:%S')
+        all_dt = api.get_barset(row.ticker, 'minute', start=st, end=nw).df
+        all_dt['volume'] = all_dt['volume'].fillna(0)
+        all_dt.dropna(inplace=True)
+        all_dt.insert(0, 'symbol', [row.ticker for _ in range(len(all_dt))])
+        exchange = sbl['exchange'][0]
+        all_dt.insert(6, 'exchange', [exchange for _ in range(len(all_dt))])
+        all_dt = all_dt[['symbol', 'open', 'high', 'low', 'close', 'volume', 'exchange']]
+        copy_from_stringio(connection, all_dt, 'stock')
+        logging.warning(f'Executed successfully for populate DB')

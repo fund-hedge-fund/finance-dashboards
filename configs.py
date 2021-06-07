@@ -1,3 +1,5 @@
+from io import StringIO
+
 IEX_TOKEN = 'sk_e9c0296cfc7b465ba30082d6bd59c2be'
 FMP_TOKEN = 'b02456fa377dffaa8d8bebec36b37f44'
 
@@ -10,6 +12,28 @@ DB_HOST = '34.68.97.213'
 DB_USER = 'hedgefund'
 DB_PASS = 'millionin2021'
 DB_NAME = 'market_data'
+
+
+def copy_from_stringio(conn, df, table):
+    """
+    Here we are going save the dataframe in memory
+    and use copy_from() to copy it to the table
+    """
+    # save dataframe to an in memory buffer
+    buffer = StringIO()
+    df.columns.name = ''
+    df.to_csv(buffer, header=False)
+    buffer.seek(0)
+    cursor = conn.cursor()
+    try:
+        cursor.copy_from(buffer, table, sep=",", columns=['dt', 'symbol', 'open', 'high', 'low', 'close', 'volume', 'exchange'])
+        conn.commit()
+    except (Exception, psycopg2.DatabaseError) as error:
+        print("Error: %s" % error)
+        conn.rollback()
+        cursor.close()
+        return 1
+    cursor.close()
 
 #import streamlit as st
 #import plotly.graph_objects as go

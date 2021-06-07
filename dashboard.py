@@ -15,6 +15,7 @@ import json
 import datetime
 from financialmodelingprep import FMP
 from jobs import populate_holdings
+from jobs import populate_stock
 import schedule
 from plotly.subplots import make_subplots
 import os
@@ -38,6 +39,7 @@ def job():
     schedule.every().wednesday.at('11:00').do(populate_holdings)
     schedule.every().thursday.at('11:00').do(populate_holdings)
     schedule.every().friday.at('11:00').do(populate_holdings)
+    schedule.every().friday.at('21:00').do(populate_stock)
     while True:
         schedule.run_pending()
         time.sleep(1)
@@ -188,7 +190,6 @@ if dashbrd == 'Stock Fundamentals':
         st.write("Forecast components")
         fig2 = m.plot_components(forecast)
         st.write(fig2)
-
 
     if screen == 'Overview':
         logo_cache_key = f"{symbol}_logo"
